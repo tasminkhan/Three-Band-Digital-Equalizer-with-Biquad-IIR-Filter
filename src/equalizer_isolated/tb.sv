@@ -4,14 +4,14 @@ module tb #(parameter width = 16);
 
     logic clk;
     logic rst;
-    logic signed [31:0] xin;   
+    logic signed [width-1:0] xin;   
     logic signed [width-1:0] yout;  
 
     integer file, outfile, status; 
 	integer sample_count = 0;
 	integer MAX_SAMPLES = 1000;                    
 
-    butter dut ( .clk(clk), .rst(rst), .xin(data_in), .yout(yout));
+    butter dut ( .clk(clk), .rst(rst), .xin(xin), .yout(yout));
 
     always #20 clk =~clk;
     initial begin
