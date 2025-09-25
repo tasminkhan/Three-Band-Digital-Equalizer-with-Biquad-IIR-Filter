@@ -1,14 +1,14 @@
 module butter #(parameter N=2, parameter width = 16)(
 input logic clk,
 input logic rst,
-output logic [width-1:0] yout,
 
 input logic [5:0]   address,      // Address within this peripheral's address space
 input logic [31:0]  data_in,      // Data in to the peripheral, bottom 8, 16 or all 32 bits are valid on write.
     
 input logic [1:0] data_write_n, // 11 = no write, 00 = 8-bits, 01 = 16-bits, 10 = 32-bits
-input logic [1:0] data_read_n  // 11 = no read,  00 = 8-bits, 01 = 16-bits, 10 = 32-bits
-    
+input logic [1:0] data_read_n,  // 11 = no read,  00 = 8-bits, 01 = 16-bits, 10 = 32-bits
+ 
+output logic [31:0] data_out     // Data out from the peripheral, bottom 8, 16 or all 32 bits are valid on read when data_ready is high   
 );
 
 //filtercoefficients
@@ -21,12 +21,12 @@ parameter signed [width-1:0] aH [1:N] = '{-16'sd2743, 16'sd2892};
 
 //delay registers
 logic signed [width-1:0] x [0:N];    // universal inputs
+logic signed [width-1:0] yout_reg;   // Store final output 
 logic signed [width-1:0] yL [1:N];   // Lowpass reg
 logic signed [width-1:0] yM [1:N];   // Bandpass reg
 logic signed [width-1:0] yH [1:N];   // Highpass reg
 
 // Memory-mapped registers
-logic filter_en, filter_rst;  // filter  control reg
 logic [7:0] gL, gM, gH;       // gain registers
 // gL = 255: Unity gain (1.0×)  
 // gL = 128: 0.5× (-6dB cut)
@@ -34,7 +34,7 @@ logic [7:0] gL, gM, gH;       // gain registers
 // gL = 0:   Mute
 
 //wire declarations
-logic signed [width-1:0] youtL, youtM, youtH;   //wire
+logic signed [width-1:0] youtL, youtM, youtH, yout;   //wire
 logic signed [31:0] sumL, sumM, sumH, sumout;  //wire
 
 // Filter computation (combinational)
@@ -51,32 +51,38 @@ always_comb
 
 // Memory-mapped register interface
 // Address Map:
-
+// 0x00: yout_reg  (final combined output from last processing)
+// 0x04: yL[1]     (low-pass output from last processing) 
+// 0x08: yM[1]     (mid-pass output from last processing)
+// 0x0C: yH[1]     (high-pass output from last processing) 
+// 0x10: x[0]      (current input sample) - also write address
+// 0x14: Gain/Control register [gH, gM, gL + control bits]
 
 always_ff @(posedge clk or posedge rst)
 	if (rst) begin
 		x[2]  <= 0; x[1]  <= 0; x[0]  <= 0;
 		yL[1] <= 0; yM[1] <= 0; yH[1] <= 0;
         yL[2] <= 0; yM[2] <= 0; yH[2] <= 0; 
+        yout_reg <= 0;
         
         gL <= 8'd255;
         gM <= 8'd255;
         gH <= 8'd255;
         
-        filter_en  <= 1'b0;
 	  end 
 	  
 	else begin // Handle memory-mapped writes
 	   if (~(&data_write_n)) begin
 	       case (address)
 	       
-               6'h00: begin 
+               6'h10: begin //actually the write address of x[0]
                     x[2]  <= x[1];  x[1]  <= x[0];  x[0]  <= data_in[15:0];
                     yL[1] <= youtL; yM[1] <= youtM; yH[1] <= youtH;
-                    yL[2] <= yL[1]; yM[2] <= yM[1]; yH[2] <= yH[1];  
+                    yL[2] <= yL[1]; yM[2] <= yM[1]; yH[2] <= yH[1]; 
+                    yout_reg <= yout; 
                end 
                
-               6'h04: begin
+               6'h14: begin
                     if (data_in [28]) 
                         gL <= data_in[7:0]; 
                     if (data_in [29]) 
@@ -93,6 +99,15 @@ always_ff @(posedge clk or posedge rst)
           endcase
        end           
 	end
+
+
+assign data_out = (address == 6'h00) ? {{16{yout_reg[15]}}, yout_reg} :  // Sign extend
+                  (address == 6'h04) ? {{16{yL[1][15]}}, yL[1]} :        // Sign extend  
+                  (address == 6'h08) ? {{16{yM[1][15]}}, yM[1]} :        // Sign extend
+                  (address == 6'h0C) ? {{16{yH[1][15]}}, yH[1]} :        // Sign extend
+                  (address == 6'h10) ? {{16{x[0][15]}}, x[0]} :          // Sign extend
+                  (address == 6'h14) ? {8'h0, gH, gM, gL} : 
+                  32'h0;
 	  
 endmodule
 	
