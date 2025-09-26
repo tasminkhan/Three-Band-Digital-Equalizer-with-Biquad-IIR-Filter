@@ -16,12 +16,12 @@ module tb #(parameter width = 16);
 	integer sample_count = 0;
 	integer MAX_SAMPLES = 1000;                    
 
-    butter dut ( .clk(clk), .rst(rst), .data_in(xin), .data_out(yout), .address(address), .data_write_n(data_write_n), .data_read_n(data_read_n));
+    butter dut ( .clk(clk), .rst_n(rst), .data_in(xin), .data_out(yout), .address(address), .data_write_n(data_write_n), .data_read_n(data_read_n));
 
-    always #20 clk =~clk;
+    always #8 clk =~clk;
     initial begin
         clk = 0;
-        rst = 1;
+        rst = 0;
         xin = 0;
         address = 6'h10;
         data_write_n = 2'b01;
@@ -33,7 +33,7 @@ module tb #(parameter width = 16);
         end
         outfile = $fopen("filtered_signal2.txt", "w");
 
-        #40 rst = 0;  
+        #40 rst = 1;  
 
         while (sample_count < MAX_SAMPLES) begin
              status = $fscanf(file, "%d", xin);

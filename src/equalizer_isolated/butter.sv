@@ -1,6 +1,6 @@
 module butter #(parameter N=2, parameter width = 16)(
 input logic clk,
-input logic rst,
+input logic rst_n,
 input  [7:0]  ui_in,
 output [7:0]  uo_out,
 
@@ -62,8 +62,8 @@ always_comb
 // 0x10: x[0]      (current input sample) - also write address
 // 0x14: Gain/Control register [gH, gM, gL + control bits]
 
-always_ff @(posedge clk or posedge rst)
-	if (rst) begin
+always_ff @(posedge clk or negedge rst_n)
+	if (!rst_n) begin
 		x[2]  <= 0; x[1]  <= 0; x[0]  <= 0;
 		yL[1] <= 0; yM[1] <= 0; yH[1] <= 0;
         yL[2] <= 0; yM[2] <= 0; yH[2] <= 0; 
