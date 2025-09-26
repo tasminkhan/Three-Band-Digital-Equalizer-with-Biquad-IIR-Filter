@@ -1,14 +1,18 @@
 module butter #(parameter N=2, parameter width = 16)(
 input logic clk,
 input logic rst,
+input  [7:0]  ui_in,
+output [7:0]  uo_out,
 
 input logic [5:0]   address,      // Address within this peripheral's address space
 input logic [31:0]  data_in,      // Data in to the peripheral, bottom 8, 16 or all 32 bits are valid on write.
     
-input logic [1:0] data_write_n, // 11 = no write, 00 = 8-bits, 01 = 16-bits, 10 = 32-bits
-input logic [1:0] data_read_n,  // 11 = no read,  00 = 8-bits, 01 = 16-bits, 10 = 32-bits
+input logic [1:0] data_write_n,   // 11 = no write, 00 = 8-bits, 01 = 16-bits, 10 = 32-bits
+input logic [1:0] data_read_n,    // 11 = no read,  00 = 8-bits, 01 = 16-bits, 10 = 32-bits
  
-output logic [31:0] data_out     // Data out from the peripheral, bottom 8, 16 or all 32 bits are valid on read when data_ready is high   
+output logic [31:0] data_out,     // Data out from the peripheral, bottom 8, 16 or all 32 bits are valid on read when data_ready is high   
+output logic  data_ready,
+output logic  user_interrupt 
 );
 
 //filtercoefficients
@@ -27,7 +31,7 @@ logic signed [width-1:0] yM [1:N];   // Bandpass reg
 logic signed [width-1:0] yH [1:N];   // Highpass reg
 
 // Memory-mapped registers
-logic [7:0] gL, gM, gH;       // gain registers
+logic [7:0] gL, gM, gH;              // gain registers
 // gL = 255: Unity gain (1.0×)  
 // gL = 128: 0.5× (-6dB cut)
 // gL = 64:  0.25× (-12dB cut)
@@ -108,6 +112,11 @@ assign data_out = (address == 6'h00) ? {{16{yout_reg[15]}}, yout_reg} :  // Sign
                   (address == 6'h10) ? {{16{x[0][15]}}, x[0]} :          // Sign extend
                   (address == 6'h14) ? {8'h0, gH, gM, gL} : 
                   32'h0;
+
+assign data_ready = 1;
+assign user_interrupt = 1'b0;
+assign uo_out = 8'h00;
+wire _unused = &{ui_in, data_read_n, 1'b0};   //suppress warnings
 	  
 endmodule
 	
