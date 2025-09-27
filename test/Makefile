@@ -2,10 +2,10 @@
 # See https://docs.cocotb.org/en/stable/quickstart.html for more info
 
 # defaults
-SIM ?= icarus
+SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = peripheral.v
+PROJECT_SOURCES = peripheral.sv
 ADDITIONAL_SOURCES = tt_wrapper.v test_harness/*.sv
 
 ifneq ($(GATES),yes)
@@ -41,6 +41,9 @@ TOPLEVEL = tb
 
 # MODULE is the basename of the Python test file
 MODULE = test
+
+# Set timing options for Verilator
+COMPILE_ARGS += --timing 
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
