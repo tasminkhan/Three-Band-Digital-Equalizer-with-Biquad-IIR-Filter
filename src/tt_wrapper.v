@@ -17,6 +17,7 @@ module tt_um_tqv_peripheral_harness (
     input  wire       rst_n     // reset_n - low to reset
 );
 
+
   // SPI access to registers
   wire [5:0] address;
   wire [31:0] data_in;  // Data in to peripheral
