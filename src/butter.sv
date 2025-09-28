@@ -12,7 +12,8 @@ input logic [1:0] data_read_n,    // 11 = no read,  00 = 8-bits, 01 = 16-bits, 1
  
 output logic [31:0] data_out,     // Data out from the peripheral, bottom 8, 16 or all 32 bits are valid on read when data_ready is high   
 output logic  data_ready,
-output logic  user_interrupt 
+output logic  user_interrupt, 
+output logic current_state
 );
 
 //filtercoefficients
@@ -47,9 +48,9 @@ always_comb
 	sumL = bL[0]*x[0] + bL[1]*x[1] + bL[2]*x[2] - aL[1]*yL[1] - aL[2]*yL[2];
 	sumM = bM[0]*x[0] + bM[1]*x[1] + bM[2]*x[2] - aM[1]*yM[1] - aM[2]*yM[2];
 	sumH = bH[0]*x[0] + bH[1]*x[1] + bH[2]*x[2] - aH[1]*yH[1] - aH[2]*yH[2];
-	youtL = sumL >>> 14; youtM = sumM >>> 14; youtH = sumH >>> 14;
+	youtL = sumL[29:14]; youtM = sumM[29:14]; youtH = sumH[29:14];
    	sumout = (youtL * gL) + (youtM * gM) + (youtH * gH);
-   	yout = sumout >>> 8;
+   	yout = sumout[23:8];
   end
 
 
@@ -62,7 +63,7 @@ always_comb
 // 0x10: x[0]      (current input sample) - also write address
 // 0x14: Gain/Control register [gH, gM, gL + control bits]
 
-always_ff @(posedge clk or negedge rst_n)
+always_ff @(posedge clk)
 	if (!rst_n) begin
 		x[2]  <= 0; x[1]  <= 0; x[0]  <= 0;
 		yL[1] <= 0; yM[1] <= 0; yH[1] <= 0;
@@ -73,36 +74,47 @@ always_ff @(posedge clk or negedge rst_n)
         gM <= 8'd255;
         gH <= 8'd255;
         
-	  end 
+	    current_state <= 1'b0;
+	end 
 	  
-	else begin // Handle memory-mapped writes
-	   if (~(&data_write_n)) begin
-	       case (address)
-	       
-               6'h10: begin //actually the write address of x[0]
-                    x[2]  <= x[1];  x[1]  <= x[0];  x[0]  <= data_in[15:0];
-                    yL[1] <= youtL; yM[1] <= youtM; yH[1] <= youtH;
-                    yL[2] <= yL[1]; yM[2] <= yM[1]; yH[2] <= yH[1]; 
-                    yout_reg <= yout; 
-               end 
-               
-               6'h14: begin
-                    if (data_in [28]) 
+	else begin // Handle memory-mapped writes //five
+        if (~(&data_write_n)) begin //four
+            if (address == 6'h10) begin //one
+                x[2]  <= x[1];  x[1]  <= x[0];  x[0]  <= data_in[15:0];
+                current_state <= 1'b1; // Go to PROCESSING state on new input write
+            end //one
+
+            else begin //three
+                current_state <= 1'b0; // Not input address, go to IDLE state
+                if (address == 6'h14) begin //two
+                    if (data_in[24]) 
                         gL <= data_in[7:0]; 
-                    if (data_in [29]) 
+                    if (data_in[25]) 
                         gM <= data_in[15:8];
-                    if (data_in [30]) 
+                    if (data_in[26]) 
                         gH <= data_in[23:16];
-                    if (data_in[31]) begin
-                       x[2]  <= 0; x[1]  <= 0; x[0]  <= 0;
-		               yL[1] <= 0; yM[1] <= 0; yH[1] <= 0;
-                       yL[2] <= 0; yM[2] <= 0; yH[2] <= 0; 
-                    end 
-               end           
-               
-          endcase
-       end           
-	end
+                    if (data_in[28]) begin //one
+                        x[2]  <= 16'h0000; x[1]  <= 16'h0000; x[0]  <= 16'h0000;
+                        yL[1] <= 16'h0000; yM[1] <= 16'h0000; yH[1] <= 16'h0000;
+                        yL[2] <= 16'h0000; yM[2] <= 16'h0000; yH[2] <= 16'h0000; 
+                        yout_reg <= 16'h0000;
+                    end //one
+               end //two
+           end //three
+        end //four
+        
+        else begin
+            current_state <= 1'b0; // No write, go to IDLE state
+        end
+
+        if(current_state) begin // PROCESSING state
+            yL[1] <= youtL; yM[1] <= youtM; yH[1] <= youtH;
+            yL[2] <= yL[1]; yM[2] <= yM[1]; yH[2] <= yH[1]; 
+            yout_reg <= yout;
+        end
+    end //five
+             
+	
 
 
 assign data_out = (address == 6'h00) ? {{16{yout_reg[15]}}, yout_reg} :  // Sign extend
@@ -120,4 +132,3 @@ wire _unused = &{ui_in, data_read_n, 1'b0};   //suppress warnings
 	  
 endmodule
 	
-
