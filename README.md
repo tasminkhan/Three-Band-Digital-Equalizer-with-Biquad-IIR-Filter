@@ -42,7 +42,7 @@ The filtered outputs are combined to produce the final equalized signal. The des
 
 ### How to Use
 
-Reset the peripheral to initialize all registers
-Write input sample to address 0x08 (triggers processing)
-Read output from address 0x00 on the next clock cycle
-Adjust gains by writing to address 0x04 with appropriate control bits
+- Reset the peripheral to initialize all registers
+- Write input sample to address 0x08 (triggers processing)
+- Read output from address 0x00 on the next clock cycle
+- Adjust gains by writing to address 0x04 with appropriate control bits
