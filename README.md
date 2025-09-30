@@ -22,9 +22,9 @@ The filtered outputs are combined to produce the final equalized signal. The des
 
 ### Initial Design
 
-- Filter coefficients were calculated in MATLAB using standard biquad design functions for the target cutoff frequencies
-- Coefficients were then scaled by 2^14 to convert from floating-point to fixed-point representation suitable for hardware implementation
-- Early prototyping done in Vivado Xilinix using SystemVerilog for quick iteration and visualization producing along with test vectors.
+- Filter coefficients were calculated in MATLAB using standard **Butterworth filter** design functions for the target cutoff frequencies
+- Coefficients were then scaled by 2^14 to convert from floating-point to **fixed-point arithmatic** representation suitable for hardware implementation
+- Early prototyping done in **Vivado Xilinx** using SystemVerilog for quick iteration and visualization producing along with test [vectors](https://github.com/tasminkhan/Three-Band-Digital-Equalizer-with-Biquad-IIR-Filter/tree/2f834cafcb0823aef5aa384bd94849cc316f1970/vectors).
 
 ### Implementation 
 
