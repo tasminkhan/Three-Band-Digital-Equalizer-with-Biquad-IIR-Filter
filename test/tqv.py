@@ -10,6 +10,7 @@ from tqv_reg import spi_write_cpha0, spi_read_cpha0
 # but when the peripheral is added to TinyQV a different implementation
 # is used that reads and writes the registers using Risc-V commands:
 # https://github.com/MichaelBell/ttsky25a-tinyQV/blob/main/test/tqv.py
+
 class TinyQV:
     def __init__(self, dut, peripheral_num):
         self.dut = dut
